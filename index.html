@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DineSpot: Top-Rated Restaurants Near You</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+
+        #map {
+            height: 500px;
+            width: 100%;
+        }
+
+        #restaurant-list {
+            margin: 20px;
+        }
+
+        .restaurant {
+            background-color: #f9f9f9;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+
+        @media (max-width: 600px) {
+            header {
+                font-size: 14px;
+            }
+            #map {
+                height: 300px;
+            }
+            .restaurant {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>DineSpot</h1>
+        <p>Find Top-Rated Restaurants Near You</p>
+    </header>
+
+    <div id="map"></div>
+    <div id="restaurant-list">
+        <h2>Restaurants Near You</h2>
+        <div id="restaurants"></div>
+    </div>
+
+    <footer>
+        &copy; 2024 DineSpot
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdlxU8u2J1lByTiAMtiwz5Heht8LtRT+RtxdRnbs3yll59PpRFz7uo2Dpz0Fo8R8A3A4zPZw8RA==" crossorigin=""></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha512-sA+e2AxYJ8ZFc6uF8LW/DZoFxgfh7A6PrmC4M8kU4MWUnGiUqv6R/VHh3ApKtl8GklxlroFf8pCuLQx3dgsxFg==" crossorigin="" />
+
+    <script>
+        let map;
+
+        function initMap() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const userLocation = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude,
+                        };
+
+                        // Initialize the map
+                        map = L.map('map').setView([userLocation.lat, userLocation.lng], 14);
+
+                        // Add OpenStreetMap tiles
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        }).addTo(map);
+
+                        // Add a marker for user's location
+                        L.marker([userLocation.lat, userLocation.lng]).addTo(map)
+                            .bindPopup("You are here")
+                            .openPopup();
+
+                        // Fetch nearby restaurants
+                        fetchNearbyRestaurants(userLocation);
+                    },
+                    () => {
+                        alert("Unable to access your location. Please enable location services.");
+                    }
+                );
+            } else {
+                alert("Your browser does not support geolocation.");
+            }
+        }
+
+        function fetchNearbyRestaurants(location) {
+            const overpassUrl = `https://overpass-api.de/api/interpreter`;
+            const query = `[out:json];
+                node["amenity"="restaurant"]
+                (around:2000,${location.lat},${location.lng});
+                out;`;
+
+            fetch(overpassUrl, {
+                method: "POST",
+                body: query,
+            })
+                .then((response) => response.json())
+                .then((data) => displayRestaurants(data.elements))
+                .catch(() => alert("Error fetching restaurant data. Please try again later."));
+        }
+
+        function displayRestaurants(restaurants) {
+            const restaurantList = document.getElementById("restaurants");
+
+            if (restaurants.length === 0) {
+                restaurantList.innerHTML = "<p>No restaurants found near your location.</p>";
+                return;
+            }
+
+            restaurants.forEach((restaurant) => {
+                const { lat, lon, tags } = restaurant;
+                const name = tags.name || "Unnamed Restaurant";
+                const cuisine = tags.cuisine || "Cuisine not specified";
+
+                // Add restaurant to the map
+                L.marker([lat, lon]).addTo(map)
+                    .bindPopup(`${name}<br>${cuisine}`);
+
+                // Add restaurant to the list
+                const restaurantDiv = document.createElement("div");
+                restaurantDiv.classList.add("restaurant");
+                restaurantDiv.innerHTML = `
+                    <h3>${name}</h3>
+                    <p>Cuisine: ${cuisine}</p>
+                    <p>Location: (${lat.toFixed(5)}, ${lon.toFixed(5)})</p>
+                `;
+                restaurantList.appendChild(restaurantDiv);
+            });
+        }
+
+        // Initialize the map on load
+        window.onload = initMap;
+    </script>
+</body>
+</html>
