@@ -47,6 +47,7 @@
         #map {
             height: 500px;
             width: 100%;
+            margin: 20px 0;
         }
 
         #restaurant-list {
@@ -71,6 +72,23 @@
             width: 100%;
         }
 
+        .highlight {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        #about {
+            padding: 20px;
+            background-color: #f4f4f4;
+            margin: 20px;
+            border-radius: 5px;
+        }
+
+        #about img {
+            max-width: 100%;
+            border-radius: 10px;
+        }
+
         @media (max-width: 600px) {
             header {
                 font-size: 14px;
@@ -87,8 +105,14 @@
 <body>
     <header>
         <h1>DineSpot</h1>
-        <p>Find Top-Rated Restaurants Near You</p>
+        <p>Find <span class="highlight">Top-Rated Restaurants</span> Near You</p>
     </header>
+
+    <div id="about">
+        <h2>About DineSpot</h2>
+        <p>DineSpot helps you discover the best dining experiences around you. Whether you're in the mood for a fancy dinner or a quick bite, we've got you covered.</p>
+        <img src="https://via.placeholder.com/800x400" alt="Delicious food">
+    </div>
 
     <div id="search-bar">
         <input type="text" id="location-input" placeholder="Enter a location (e.g., city or area)">
@@ -102,7 +126,7 @@
     </div>
 
     <footer>
-        &copy; 2024 DineSpot
+        &copy; 2024 DineSpot | Designed to make dining delightful
     </footer>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdlxU8u2J1lByTiAMtiwz5Heht8LtRT+RtxdRnbs3yll59PpRFz7uo2Dpz0Fo8R8A3A4zPZw8RA==" crossorigin=""></script>
@@ -213,7 +237,8 @@
                     map.setView([location.lat, location.lng], 14);
                     fetchNearbyRestaurants(location);
                 })
-                .catch(() => alert("Error fetching location data. Please try again later."));
+                .catch(() => alert
+
         }
 
         window.onload = initMap;
