@@ -19,6 +19,31 @@
             text-align: center;
         }
 
+        #search-bar {
+            margin: 20px;
+            text-align: center;
+        }
+
+        #search-bar input {
+            padding: 10px;
+            width: 70%;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        #search-bar button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #search-bar button:hover {
+            background-color: #45a049;
+        }
+
         #map {
             height: 500px;
             width: 100%;
@@ -65,6 +90,11 @@
         <p>Find Top-Rated Restaurants Near You</p>
     </header>
 
+    <div id="search-bar">
+        <input type="text" id="location-input" placeholder="Enter a location (e.g., city or area)">
+        <button onclick="searchLocation()">Search</button>
+    </div>
+
     <div id="map"></div>
     <div id="restaurant-list">
         <h2>Restaurants Near You</h2>
@@ -90,20 +120,7 @@
                             lng: position.coords.longitude,
                         };
 
-                        // Initialize the map
-                        map = L.map('map').setView([userLocation.lat, userLocation.lng], 14);
-
-                        // Add OpenStreetMap tiles
-                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        }).addTo(map);
-
-                        // Add a marker for user's location
-                        L.marker([userLocation.lat, userLocation.lng]).addTo(map)
-                            .bindPopup("You are here")
-                            .openPopup();
-
-                        // Fetch nearby restaurants
+                        loadMap(userLocation);
                         fetchNearbyRestaurants(userLocation);
                     },
                     () => {
@@ -113,6 +130,18 @@
             } else {
                 alert("Your browser does not support geolocation.");
             }
+        }
+
+        function loadMap(location) {
+            map = L.map('map').setView([location.lat, location.lng], 14);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            L.marker([location.lat, location.lng]).addTo(map)
+                .bindPopup("You are here")
+                .openPopup();
         }
 
         function fetchNearbyRestaurants(location) {
@@ -133,6 +162,7 @@
 
         function displayRestaurants(restaurants) {
             const restaurantList = document.getElementById("restaurants");
+            restaurantList.innerHTML = "";
 
             if (restaurants.length === 0) {
                 restaurantList.innerHTML = "<p>No restaurants found near your location.</p>";
@@ -144,11 +174,9 @@
                 const name = tags.name || "Unnamed Restaurant";
                 const cuisine = tags.cuisine || "Cuisine not specified";
 
-                // Add restaurant to the map
                 L.marker([lat, lon]).addTo(map)
                     .bindPopup(`${name}<br>${cuisine}`);
 
-                // Add restaurant to the list
                 const restaurantDiv = document.createElement("div");
                 restaurantDiv.classList.add("restaurant");
                 restaurantDiv.innerHTML = `
@@ -160,7 +188,34 @@
             });
         }
 
-        // Initialize the map on load
+        function searchLocation() {
+            const locationInput = document.getElementById("location-input").value;
+            if (!locationInput) {
+                alert("Please enter a location to search.");
+                return;
+            }
+
+            const geocodingUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationInput)}`;
+
+            fetch(geocodingUrl)
+                .then((response) => response.json())
+                .then((data) => {
+                    if (data.length === 0) {
+                        alert("Location not found. Please try a different search term.");
+                        return;
+                    }
+
+                    const location = {
+                        lat: parseFloat(data[0].lat),
+                        lng: parseFloat(data[0].lon),
+                    };
+
+                    map.setView([location.lat, location.lng], 14);
+                    fetchNearbyRestaurants(location);
+                })
+                .catch(() => alert("Error fetching location data. Please try again later."));
+        }
+
         window.onload = initMap;
     </script>
 </body>
