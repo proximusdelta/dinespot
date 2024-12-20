@@ -252,6 +252,82 @@
             Contact: ${restaurant.contact}<br>
             Address: ${restaurant.address}
         `);
+                    // Add the restaurant to the list
+                    const restaurantDiv = document.createElement("div");
+                    restaurantDiv.className = "restaurant";
+                    restaurantDiv.innerHTML = `
+                        <strong>${restaurant.tags.name || "Unnamed Restaurant"}</strong><br>
+                        Address: ${restaurant.tags['addr:full'] || "Unknown"}<br>
+                        Cuisine: ${restaurant.tags.cuisine || "Not specified"}<br>
+                    `;
+                    restaurantList.appendChild(restaurantDiv);
+
+                    // Add the restaurant marker on the map
+                    const marker = L.marker([restaurant.lat, restaurant.lon]).addTo(map);
+                    marker.bindPopup(`
+                        <strong>${restaurant.tags.name || "Unnamed Restaurant"}</strong><br>
+                        Cuisine: ${restaurant.tags.cuisine || "Not specified"}
+                    `);
+                });
+            } else {
+                restaurantList.innerHTML = "<p>No restaurants found nearby.</p>";
+            }
+        }
+
+        function searchLocation() {
+            const locationInput = document.getElementById("location-input").value;
+            if (!locationInput) {
+                alert("Please enter a location.");
+                return;
+            }
+
+            fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationInput)}`
+            )
+                .then((response) => response.json())
+                .then((locations) => {
+                    if (locations.length > 0) {
+                        const location = {
+                            lat: parseFloat(locations[0].lat),
+                            lng: parseFloat(locations[0].lon),
+                        };
+                        map.setView([location.lat, location.lng], 14);
+                        fetchNearbyRestaurants(location);
+                    } else {
+                        alert("Location not found. Please try another search.");
+                    }
+                })
+                .catch(() => alert("Error searching for location. Please try again."));
+        }
+
+        function registerRestaurant(event) {
+            event.preventDefault();
+            const name = document.getElementById("restaurant-name").value;
+            const bestDish = document.getElementById("best-dish").value;
+            const lat = parseFloat(document.getElementById("restaurant-lat").value);
+            const lng = parseFloat(document.getElementById("restaurant-lng").value);
+
+            if (isNaN(lat) || isNaN(lng)) {
+                alert("Invalid latitude or longitude.");
+                return;
+            }
+
+            registeredRestaurants.push({ name, bestDish, lat, lng });
+
+            const marker = L.marker([lat, lng]).addTo(map);
+            marker.bindPopup(`
+                <strong>${name}</strong><br>
+                Best Dish: ${bestDish}
+            `);
+
+            alert("Restaurant registered successfully!");
+            document.querySelector("#restaurant-registration form").reset();
+        }
+
+        window.onload = initMap;
+    </script>
+</body>
+</html>
 
         // Add a click event listener for additional interaction
         marker.on('click', () => {
