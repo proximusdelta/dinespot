@@ -124,6 +124,9 @@
         <h2>Restaurants Near You</h2>
         <div id="restaurants"></div>
     </div>
+    <div id="loading" style="display: none; text-align: center;">
+        <p>Loading...</p>
+    </div>
 
     <footer>
         &copy; 2024 DineSpot | Designed to make dining delightful
@@ -169,76 +172,96 @@
         }
 
         function fetchNearbyRestaurants(location) {
-            const overpassUrl = `https://overpass-api.de/api/interpreter`;
-            const query = `[out:json];
-                node["amenity"="restaurant"]
-                (around:2000,${location.lat},${location.lng});
-                out;`;
+    const loadingElement = document.getElementById("loading");
+    loadingElement.style.display = "block";
 
-            fetch(overpassUrl, {
-                method: "POST",
-                body: query,
-            })
-                .then((response) => response.json())
-                .then((data) => displayRestaurants(data.elements))
-                .catch(() => alert("Error fetching restaurant data. Please try again later."));
-        }
+    const overpassUrl = `https://overpass-api.de/api/interpreter`;
+    const query = `
+        [out:json];
+        node["amenity"="restaurant"](around:2000,${location.lat},${location.lng});
+        out;
+    `;
+
+    fetch(overpassUrl, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: query,
+    })
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error("Error fetching restaurant data.");
+            }
+            return response.json();
+        })
+        .then((data) => displayRestaurants(data.elements))
+        .catch((error) => alert(error.message))
+        .finally(() => {
+            loadingElement.style.display = "none";
+        });
+}
+
 
         function displayRestaurants(restaurants) {
-            const restaurantList = document.getElementById("restaurants");
-            restaurantList.innerHTML = "";
+    const restaurantList = document.getElementById("restaurants");
+    restaurantList.innerHTML = "";
 
-            if (restaurants.length === 0) {
-                restaurantList.innerHTML = "<p>No restaurants found near your location.</p>";
-                return;
-            }
+    if (restaurants.length === 0) {
+        restaurantList.innerHTML = "<p>No restaurants found near your location.</p>";
+        return;
+    }
 
-            restaurants.forEach((restaurant) => {
-                const { lat, lon, tags } = restaurant;
-                const name = tags.name || "Unnamed Restaurant";
-                const cuisine = tags.cuisine || "Cuisine not specified";
+    restaurants.forEach((restaurant) => {
+        const { lat, lon, tags } = restaurant;
+        const name = tags.name || "Unnamed Restaurant";
+        const cuisine = tags.cuisine || "Cuisine not specified";
 
-                L.marker([lat, lon]).addTo(map)
-                    .bindPopup(`${name}<br>${cuisine}`);
+        L.marker([lat, lon]).addTo(map).bindPopup(`${name}<br>${cuisine}`);
 
-                const restaurantDiv = document.createElement("div");
-                restaurantDiv.classList.add("restaurant");
-                restaurantDiv.innerHTML = `
-                    <h3>${name}</h3>
-                    <p>Cuisine: ${cuisine}</p>
-                    <p>Location: (${lat.toFixed(5)}, ${lon.toFixed(5)})</p>
-                `;
-                restaurantList.appendChild(restaurantDiv);
-            });
-        }
+        const restaurantDiv = document.createElement("div");
+        restaurantDiv.classList.add("restaurant");
+        restaurantDiv.innerHTML = `
+            <img src="https://via.placeholder.com/150" alt="${name}" style="width: 100px; height: 100px; float: left; margin-right: 10px; border-radius: 5px;">
+            <h3>${name}</h3>
+            <p>Cuisine: ${cuisine}</p>
+            <p>Location: (${lat.toFixed(5)}, ${lon.toFixed(5)})</p>
+        `;
+        restaurantList.appendChild(restaurantDiv);
+    });
+}
+
 
         function searchLocation() {
-            const locationInput = document.getElementById("location-input").value;
-            if (!locationInput) {
-                alert("Please enter a location to search.");
-                return;
-            }
+        const locationInput = document.getElementById("location-input").value;
+        if (!locationInput) {
+            alert("Please enter a location to search.");
+            return;
+        }
 
-            const geocodingUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationInput)}`;
+        const geocodingUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationInput)}`;
 
-            fetch(geocodingUrl)
-                .then((response) => response.json())
-                .then((data) => {
-                    if (data.length === 0) {
-                        alert("Location not found. Please try a different search term.");
-                        return;
-                    }
+        fetch(geocodingUrl)
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error("Error fetching location data.");
+                }
+                return response.json();
+            })
+            .then((data) => {
+                if (data.length === 0) {
+                    alert("Location not found. Please try a different search term.");
+                    return;
+                }
 
-                    const location = {
-                        lat: parseFloat(data[0].lat),
-                        lng: parseFloat(data[0].lon),
-                    };
+                const location = {
+                    lat: parseFloat(data[0].lat),
+                    lng: parseFloat(data[0].lon),
+                };
 
-                    map.setView([location.lat, location.lng], 14);
-                    fetchNearbyRestaurants(location);
-                })
-                .catch(() => alert
-
+                map.setView([location.lat, location.lng], 14);
+                fetchNearbyRestaurants(location);
+            })
+            .catch((error) => alert(error.message));
+    }
         }
 
         window.onload = initMap;
