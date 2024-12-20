@@ -89,6 +89,38 @@
             border-radius: 10px;
         }
 
+        #restaurant-registration {
+            padding: 20px;
+            margin: 20px;
+            background-color: #f4f4f4;
+            border-radius: 5px;
+        }
+
+        #restaurant-registration label {
+            font-weight: bold;
+        }
+
+        #restaurant-registration input {
+            padding: 10px;
+            width: 100%;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        #restaurant-registration button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #restaurant-registration button:hover {
+            background-color: #45a049;
+        }
+
         @media (max-width: 600px) {
             header {
                 font-size: 14px;
@@ -124,8 +156,24 @@
         <h2>Restaurants Near You</h2>
         <div id="restaurants"></div>
     </div>
-    <div id="loading" style="display: none; text-align: center;">
-        <p>Loading...</p>
+
+    <div id="restaurant-registration">
+        <h2>Register Your Restaurant</h2>
+        <form onsubmit="registerRestaurant(event)">
+            <label for="restaurant-name">Restaurant Name:</label><br>
+            <input type="text" id="restaurant-name" required><br><br>
+            
+            <label for="best-dish">Best-Selling Dish:</label><br>
+            <input type="text" id="best-dish" required><br><br>
+            
+            <label for="restaurant-lat">Latitude:</label><br>
+            <input type="text" id="restaurant-lat" required><br><br>
+            
+            <label for="restaurant-lng">Longitude:</label><br>
+            <input type="text" id="restaurant-lng" required><br><br>
+            
+            <button type="submit">Register</button>
+        </form>
     </div>
 
     <footer>
@@ -137,6 +185,7 @@
 
     <script>
         let map;
+        const registeredRestaurants = [];
 
         function initMap() {
             if (navigator.geolocation) {
@@ -172,99 +221,43 @@
         }
 
         function fetchNearbyRestaurants(location) {
-    const loadingElement = document.getElementById("loading");
-    loadingElement.style.display = "block";
+            const overpassUrl = `https://overpass-api.de/api/interpreter`;
+            const query = `[out:json];
+                node["amenity"="restaurant"]
+                (around:2000,${location.lat},${location.lng});
+                out;`;
 
-    const overpassUrl = `https://overpass-api.de/api/interpreter`;
-    const query = `
-        [out:json];
-        node["amenity"="restaurant"](around:2000,${location.lat},${location.lng});
-        out;
-    `;
-
-    fetch(overpassUrl, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body: query,
-    })
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error("Error fetching restaurant data.");
-            }
-            return response.json();
-        })
-        .then((data) => displayRestaurants(data.elements))
-        .catch((error) => alert(error.message))
-        .finally(() => {
-            loadingElement.style.display = "none";
-        });
-}
-
+            fetch(overpassUrl, {
+                method: "POST",
+                body: query,
+            })
+                .then((response) => response.json())
+                .then((data) => displayRestaurants(data.elements))
+                .catch(() => alert("Error fetching restaurant data. Please try again later."));
+        }
 
         function displayRestaurants(restaurants) {
-    const restaurantList = document.getElementById("restaurants");
-    restaurantList.innerHTML = "";
+            const restaurantList = document.getElementById("restaurants");
+            restaurantList.innerHTML = "";
 
-    if (restaurants.length === 0) {
-        restaurantList.innerHTML = "<p>No restaurants found near your location.</p>";
-        return;
-    }
-
+            if (restaurants.length > 0) {
     restaurants.forEach((restaurant) => {
-        const { lat, lon, tags } = restaurant;
-        const name = tags.name || "Unnamed Restaurant";
-        const cuisine = tags.cuisine || "Cuisine not specified";
+        // Create a marker for each restaurant
+        const marker = L.marker([restaurant.latitude, restaurant.longitude]).addTo(map);
 
-        L.marker([lat, lon]).addTo(map).bindPopup(`${name}<br>${cuisine}`);
+        // Create a popup with the restaurant's details
+        marker.bindPopup(`
+            <strong>${restaurant.name}</strong><br>
+            Best Dish: ${restaurant.bestDish}<br>
+            Contact: ${restaurant.contact}<br>
+            Address: ${restaurant.address}
+        `);
 
-        const restaurantDiv = document.createElement("div");
-        restaurantDiv.classList.add("restaurant");
-        restaurantDiv.innerHTML = `
-            <img src="https://via.placeholder.com/150" alt="${name}" style="width: 100px; height: 100px; float: left; margin-right: 10px; border-radius: 5px;">
-            <h3>${name}</h3>
-            <p>Cuisine: ${cuisine}</p>
-            <p>Location: (${lat.toFixed(5)}, ${lon.toFixed(5)})</p>
-        `;
-        restaurantList.appendChild(restaurantDiv);
+        // Add a click event listener for additional interaction
+        marker.on('click', () => {
+            alert(`You clicked on ${restaurant.name}`);
+        });
     });
+} else {
+    console.log("No restaurants found to display.");
 }
-
-
-        function searchLocation() {
-        const locationInput = document.getElementById("location-input").value;
-        if (!locationInput) {
-            alert("Please enter a location to search.");
-            return;
-        }
-
-        const geocodingUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationInput)}`;
-
-        fetch(geocodingUrl)
-            .then((response) => {
-                if (!response.ok) {
-                    throw new Error("Error fetching location data.");
-                }
-                return response.json();
-            })
-            .then((data) => {
-                if (data.length === 0) {
-                    alert("Location not found. Please try a different search term.");
-                    return;
-                }
-
-                const location = {
-                    lat: parseFloat(data[0].lat),
-                    lng: parseFloat(data[0].lon),
-                };
-
-                map.setView([location.lat, location.lng], 14);
-                fetchNearbyRestaurants(location);
-            })
-            .catch((error) => alert(error.message));
-    }
-        }
-
-        window.onload = initMap;
-    </script>
-</body>
-</html>
